@@ -20,42 +20,47 @@ const travellingCostRoutes = require('./routes/travellingCostRoutes');
 
 const app = express();
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN || '')
+// ✅ Parse allowed origins from ENV
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(origin => origin.trim())
   .filter(Boolean);
 
-// Security middleware
+// ✅ Security middleware
 app.use(helmet());
 
-// CORS middleware
+// ✅ CORS middleware (FIXED)
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow non-browser requests (curl, health checks, server-to-server).
+  origin: function (origin, callback) {
+    // Allow requests without origin (Postman, mobile apps, etc.)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.length === 0) {
-      return callback(null, process.env.NODE_ENV !== 'production');
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      console.log("❌ Blocked by CORS:", origin);
+      return callback(new Error("Not allowed by CORS"));
     }
-
-    return callback(null, allowedOrigins.includes(origin));
   },
   credentials: true,
 }));
 
-// Body parser middleware
+// ✅ Handle preflight requests (VERY IMPORTANT)
+app.options('*', cors());
+
+// ✅ Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Logger middleware
+// ✅ Logger (only in development)
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Static files for invoices
+// ✅ Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Health check endpoint
+// ✅ Health check
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
@@ -64,7 +69,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes
+// ✅ API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/batches', batchRoutes);
 app.use('/api/customers', customerRoutes);
@@ -74,7 +79,7 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/travelling-costs', travellingCostRoutes);
 
-// Root endpoint
+// ✅ Root endpoint
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -94,8 +99,10 @@ app.get('/', (req, res) => {
   });
 });
 
-// Error handling
+// ❌ 404 handler
 app.use(notFound);
+
+// ❌ Error handler
 app.use(errorHandler);
 
 module.exports = app;
