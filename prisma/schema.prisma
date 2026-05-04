@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Batch {
+  id            Int      @id @default(autoincrement())
+  batchName     String
+  cropType      String
+  totalProduced Int      @default(0)
+  deadCrops     Int      @default(0)
+  createdDate   DateTime @default(now())
+  notes         String?  @db.Text
+  sales         Sale[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([batchName])
+  @@index([cropType])
+}
+
+model Customer {
+  id          Int      @id @default(autoincrement())
+  name        String
+  mobileNumber String
+  address     String?  @db.Text
+  sales       Sale[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([mobileNumber])
+}
+
+model Sale {
+  id               Int      @id @default(autoincrement())
+  batchId          Int
+  customerId       Int
+  cropQuantity     Int
+  pricePerCrop     Float
+  travelingCost    Float    @default(0)
+  plantationCost   Float    @default(0)
+  totalAmount      Float
+  saleDate         DateTime @default(now())
+  batch            Batch    @relation(fields: [batchId], references: [id])
+  customer         Customer @relation(fields: [customerId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([batchId])
+  @@index([customerId])
+  @@index([saleDate])
+}
+
+model Worker {
+  id         Int      @id @default(autoincrement())
+  name       String
+  mobile     String   @unique
+  joinDate   DateTime @default(now())
+  attendance Attendance[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([mobile])
+}
+
+model Attendance {
+  id             Int         @id @default(autoincrement())
+  workerId       Int
+  date           DateTime    @default(now())
+  workType       WorkType
+  extraHours     Int         @default(0)
+  borrowedAmount Float       @default(0)
+  worker         Worker      @relation(fields: [workerId], references: [id])
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([workerId, date])
+  @@index([workerId])
+  @@index([date])
+}
+
+enum WorkType {
+  FULL_DAY
+  HALF_DAY
+}
+
+model RawMaterial {
+  id          Int      @id @default(autoincrement())
+  materialName String
+  quantity    Int
+  cost        Float
+  purchaseDate DateTime @default(now())
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([materialName])
+  @@index([purchaseDate])
+}
+
+model TravellingCost {
+  id           Int      @id @default(autoincrement())
+  customerName String
+  location     String
+  cost         Float
+  travelDate   DateTime @default(now())
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([customerName])
+  @@index([travelDate])
+}
